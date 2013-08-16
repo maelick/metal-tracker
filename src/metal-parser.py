@@ -12,6 +12,9 @@ _headers = {'Content-type': 'application/x-www-form-urlencoded',
             'Accept': 'text/plain'}
 
 def parse_args():
+    """
+    Parses CLI args.
+    """
     parser = argparse.ArgumentParser(description='Parses metal-tracker')
     parser.add_argument('min_id', type=int,
                         help='Id of the oldest torrent to retrieve')
@@ -22,12 +25,20 @@ def parse_args():
     return parser.parse_args()
 
 def get_page(con, n):
+    """
+    Returns the raw html nth page of updates using the given
+    connection.
+    """
     params = 'page={}'.format(n)
     con.request('POST', '/site/getupdates.html', params, _headers)
     r = con.getresponse()
     return r.read()
 
 class Parser(HTMLParser.HTMLParser):
+    """
+    HTML parser for metal-tracker updates. Parses torrents name, link,
+    id and metadata. Adds all torrents to a torrent list.
+    """
     def __init__(self):
         HTMLParser.HTMLParser.__init__(self)
         self._data = None
@@ -36,6 +47,10 @@ class Parser(HTMLParser.HTMLParser):
         self._ids = set()
 
     def has_parsed(self, id):
+        """
+        Returns True iff id has already been parsed (i.e. oldest
+        torrent parsed is older than the one referred by id).
+        """
         return self._ids and min(self._ids) <= id
 
     def handle_starttag(self, tag, attrs):
