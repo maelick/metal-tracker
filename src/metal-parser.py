@@ -30,45 +30,48 @@ def get_page(con, n):
 class Parser(HTMLParser.HTMLParser):
     def __init__(self):
         HTMLParser.HTMLParser.__init__(self)
-        self.data = None
-        self.new_torrent = False
+        self._data = None
+        self._new_torrent = False
         self.torrents = []
-        self.min_id = 1e309
+        self._ids = set()
+
+    def has_parsed(self, id):
+        return self._ids and min(self._ids) <= id
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if tag == 'div' and attrs.get('class') == 'update':
                 self.torrents.append({'title': '', 'link': '',
                                  'id': None, 'data': {}})
-                self.new_torrent = True
-        elif tag == 'a' and self.new_torrent and 'href' in attrs:
+                self._new_torrent = True
+        elif tag == 'a' and self._new_torrent and 'href' in attrs:
             self.torrents[-1]['link'] = attrs['href']
             match_id = re.search('\d+', attrs['href'])
             if match_id:
                 id = int(match_id.group(0))
+                self._ids.add(id)
                 self.torrents[-1]['id'] = id
-                self.min_id = min(id, self.min_id)
-            self.new_torrent = False
+            self._new_torrent = False
         elif tag == 'img' and attrs.get('class') == 'updates':
                 self.torrents[-1]['title'] = attrs['title']
         elif tag == 'li' and not attrs:
-            self.data = []
+            self._data = []
 
     def handle_data(self, data):
-        if self.data is not None:
-            if len(self.data) < 2:
-                self.data.append(data)
-            if len(self.data) == 2:
-                key, value = self.data
+        if self._data is not None:
+            if len(self._data) < 2:
+                self._data.append(data)
+            if len(self._data) == 2:
+                key, value = self._data
                 self.torrents[-1]['data'][key.split(':')[0]] = value
-                self.data = None
+                self._data = None
 
 if __name__ == '__main__':
     args = parse_args()
     parser = Parser()
     page = args.start
     con = httplib.HTTPConnection('en.metal-tracker.com')
-    while parser.min_id > args.min_id:
+    while not parser.has_parsed(args.min_id):
         print('Parsing page {}'.format(page), file=sys.stderr)
         content = get_page(con, page).decode('utf8')
         parser.feed(content)
