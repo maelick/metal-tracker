@@ -8,7 +8,8 @@ import argparse
 import yaml
 import sys
 
-_headers = {'Content-type': 'application/x-www-form-urlencoded',
+_MT_ADDR = 'en.metal-tracker.com'
+_HEADERS = {'Content-type': 'application/x-www-form-urlencoded',
             'Accept': 'text/plain'}
 
 def parse_args():
@@ -30,7 +31,7 @@ def get_page(con, n):
     connection.
     """
     params = 'page={}'.format(n)
-    con.request('POST', '/site/getupdates.html', params, _headers)
+    con.request('POST', '/site/getupdates.html', params, _HEADERS)
     r = con.getresponse()
     return r.read()
 
@@ -60,7 +61,7 @@ class Parser(HTMLParser.HTMLParser):
                                  'id': None, 'data': {}})
                 self._new_torrent = True
         elif tag == 'a' and self._new_torrent and 'href' in attrs:
-            self.torrents[-1]['link'] = attrs['href']
+            self.torrents[-1]['link'] = 'http://' + _MT_ADDR + attrs['href']
             match_id = re.search('\d+', attrs['href'])
             if match_id:
                 id = int(match_id.group(0))
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     args = parse_args()
     parser = Parser()
     page = args.start
-    con = httplib.HTTPConnection('en.metal-tracker.com')
+    con = httplib.HTTPConnection(_MT_ADDR)
     while not parser.has_parsed(args.min_id):
         print('Parsing page {}'.format(page), file=sys.stderr)
         content = get_page(con, page).decode('utf8')
