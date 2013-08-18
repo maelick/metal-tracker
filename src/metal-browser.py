@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import yaml
 import sys
+import re
 
 import IPython
 
@@ -53,6 +54,18 @@ def make_index(torrents, keys, simplify=True):
         else:
             index[k] = new_index.values()[0]
     return index
+
+def get_regex(bands_list):
+    """
+    Makes a regex which match all bands in bands_list.
+    """
+    return re.compile('(' + ')|('.join(bands_list) + ')', flags=re.IGNORECASE)
+
+def filter_torrents(torrents, regex):
+    """
+    Filter torrents with a regex on title.
+    """
+    return [t for t in torrents if regex.match(t['title'])]
 
 if __name__ == '__main__':
     args = parse_args()
